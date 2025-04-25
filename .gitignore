@@ -1,0 +1,14 @@
+*/logs/*
+*.jpg
+*.png
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.webp
+*.env
+*.pth
+.conda
+.venv
+__pycache__
+.DS_Store
