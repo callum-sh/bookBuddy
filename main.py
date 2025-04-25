@@ -5,11 +5,11 @@ import threading
 import time
 import numpy as np
 from models import Bookshelf
+import requests
 
 
 app = Flask(__name__)
 
-logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
 bookshelf = Bookshelf()
 
 MAX_POSITION = 740
@@ -23,10 +23,17 @@ def data():
         return "OK", 200
     book = bookshelf.get(position)
 
-    # TODO: don't return till audio has played
+
     if book:
         print(book)
+        url = "http://10.0.0.149:80/command"
+        headers = {"Content-Type": "text/plain"}
+        payload = "done"
 
+        response = requests.post(url, data=payload, headers=headers)
+        print("Status:", response.status_code)
+        print("Response:", response.text)
+    
     return "OK", 200
 
 
