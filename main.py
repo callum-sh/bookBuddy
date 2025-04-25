@@ -6,6 +6,8 @@ import time
 import numpy as np
 from models import Bookshelf
 import requests
+import vlc
+import time
 
 
 app = Flask(__name__)
@@ -26,6 +28,8 @@ def data():
 
     if book:
         print(book)
+            
+        play_book(book.title)
         url = "http://10.0.0.149:80/command"
         headers = {"Content-Type": "text/plain"}
         payload = "done"
@@ -36,6 +40,15 @@ def data():
     
     return "OK", 200
 
+
+def play_book(book_title: str):
+    p = vlc.MediaPlayer("/Users/pierresarrailh/SoftwareDev/CapstonePythonScripts/bookBuddy/audios/laws_and_morality.mp3")
+    p.play()
+    state = p.get_state()
+    while state != vlc.State.Ended:
+        time.sleep(1)
+        state = p.get_state()
+    
 
 def schedule_bookshelf_updates(n: int = 600):
     """Function to schedule bookshelf updates every minute"""
