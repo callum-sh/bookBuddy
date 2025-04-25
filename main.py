@@ -31,7 +31,7 @@ def data():
 
 
     if book:
-        print(f"Detected book position: {book.position}")
+        print(f"Detected book position: {book}")
         
         # Get the actual title from LLM
         title = bookshelf.get_title_from_llm(position)
@@ -58,6 +58,7 @@ def play_book(audio_filename: str):
     audio_path = os.path.join(base_dir, "audios", audio_filename)
     print("Playing: ", audio_path)
     p = vlc.MediaPlayer(audio_path)
+    p.set_rate(2)
     p.play()
     state = p.get_state()
     while state != vlc.State.Ended:

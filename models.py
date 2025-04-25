@@ -50,7 +50,7 @@ class Bookshelf:
         # Get vertical slice between two boundary lines
         x_min = self.lines[idx]
         x_max = self.lines[idx + 1]
-        padding = int((x_max - x_min) * 0.15)
+        padding = int((x_max - x_min))
         x_center = (x_min + x_max) // 2
         x_crop_min = max(0, x_center - padding)
         x_crop_max = min(self.frame.shape[1], x_center + padding)
@@ -95,7 +95,7 @@ class Bookshelf:
 
         # Compose OpenAI request
         prompt = (
-            f"This is an image of a book cover. Please identify which of the following books it is: {book_titles}. "
+            f"Look at the book in the centre of this image. Please identify which of the following books it is: {book_titles}. "
             "If you can't identify it with certainty, provide your best guess and indicate that it's uncertain. "
             "Respond with only one of the options."
         )
