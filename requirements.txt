@@ -1,0 +1,9 @@
+opencv-python
+numpy
+matplotlib
+segment_anything
+torch
+dotenv
+requests
+flask
+python-vlc

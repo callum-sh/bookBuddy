@@ -8,13 +8,17 @@ from models import Bookshelf
 import requests
 import vlc
 import time
-
+import json
 
 app = Flask(__name__)
 
 bookshelf = Bookshelf()
 
 MAX_POSITION = 740
+
+# Load the mappings.json to map titles to mp3 files
+with open(os.path.join(os.path.dirname(__file__), "mappings.json")) as f:
+    mappings = json.load(f)
 
 @app.route("/data", methods=["POST"])
 def data():
@@ -27,9 +31,17 @@ def data():
 
 
     if book:
-        print(book)
-            
-        play_book(book.title)
+        print(f"Detected book position: {book.position}")
+        
+        # Get the actual title from LLM
+        title = bookshelf.get_title_from_llm(position)
+        title = title.strip()
+        
+        print(f"LLM identified: {title}")
+        if title in mappings:
+            play_book(mappings[title])
+        else:
+            print("Title not found in mappings.")
         url = "http://10.0.0.149:80/command"
         headers = {"Content-Type": "text/plain"}
         payload = "done"
@@ -41,8 +53,11 @@ def data():
     return "OK", 200
 
 
-def play_book(book_title: str):
-    p = vlc.MediaPlayer("/Users/pierresarrailh/SoftwareDev/CapstonePythonScripts/bookBuddy/audios/laws_and_morality.mp3")
+def play_book(audio_filename: str):
+    base_dir = os.path.dirname(os.path.abspath(__file__))  # Folder where this script lives
+    audio_path = os.path.join(base_dir, "audios", audio_filename)
+    print("Playing: ", audio_path)
+    p = vlc.MediaPlayer(audio_path)
     p.play()
     state = p.get_state()
     while state != vlc.State.Ended:

@@ -37,6 +37,107 @@ class Bookshelf:
         # calculate L1 distance between position and each book's position
         distances = [abs(book.position - position) for book in self.books]
         return self.books[np.argmin(distances)]
+    
+    def _crop_book(self, position):
+        # Find the closest boundary index
+        distances = [abs(book.position - position) for book in self.books]
+        idx = np.argmin(distances)
+
+        if idx >= len(self.lines) - 1:
+            print("Invalid position index for cropping.")
+            return None
+
+        # Get vertical slice between two boundary lines
+        x_min = self.lines[idx]
+        x_max = self.lines[idx + 1]
+        padding = int((x_max - x_min) * 0.15)
+        x_center = (x_min + x_max) // 2
+        x_crop_min = max(0, x_center - padding)
+        x_crop_max = min(self.frame.shape[1], x_center + padding)
+
+        # Full height of image
+        y_min = 0
+        y_max = self.frame.shape[0]
+
+        cropped = self.frame[y_min:y_max, x_crop_min:x_crop_max]
+
+        # Save the crop as crop.jpg (overwrite each time)
+        crop_path = os.path.join(self.log_dir, "crop.jpg")
+        cv2.imwrite(crop_path, cropped)
+
+        if self.debug:
+            print(f"Cropped book saved at: {crop_path}")
+
+        return cropped
+    
+    def get_title_from_llm(self, position):
+        import base64
+        import requests
+        import io
+        from PIL import Image
+        import json
+
+        # Crop the book image
+        cropped = self._crop_book(position)
+        if cropped is None:
+            return "Cropping failed."
+
+        # Convert cropped image to base64
+        pil_img = Image.fromarray(cropped)
+        buffered = io.BytesIO()
+        pil_img.save(buffered, format="JPEG")
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+        # Load book title options
+        with open(os.path.join(os.path.dirname(__file__), "mappings.json"), "r") as f:
+            mappings = json.load(f)
+        book_titles = ", ".join(mappings.keys())
+
+        # Compose OpenAI request
+        prompt = (
+            f"This is an image of a book cover. Please identify which of the following books it is: {book_titles}. "
+            "If you can't identify it with certainty, provide your best guess and indicate that it's uncertain. "
+            "Respond with only one of the options."
+        )
+
+        API_KEY = os.getenv("OPENAI_API_KEY")
+        API_URL = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {API_KEY}"
+        }
+
+        payload = {
+            "model": "gpt-4o",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}
+                    ]
+                }
+            ],
+            "max_tokens": 300
+        }
+
+        # Send the request to OpenAI
+        try:
+            response = requests.post(API_URL, headers=headers, json=payload)
+            result = response.json()
+            if "choices" in result and len(result["choices"]) > 0:
+                answer = result["choices"][0]["message"]["content"]
+                print(f"Identified Title: {answer}")
+                return answer
+            else:
+                error = result.get("error", {}).get("message", "Unknown error")
+                print(f"API Error: {error}")
+                return f"API Error: {error}"
+        except Exception as e:
+            print(f"Exception during OpenAI call: {e}")
+            return f"Error: {e}"
+        
+        
 
     def update_positions(self):
         cap = cv2.VideoCapture(0)
@@ -189,3 +290,4 @@ class Bookshelf:
                 position=self.normalized_lines[i],
             )
             self.books.append(curr_book)
+
